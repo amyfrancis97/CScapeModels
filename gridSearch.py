@@ -34,15 +34,17 @@ dataset = dataset_variants.rename(columns={0: "class"})
 
 result = pd.concat([dataset[dataset["class"] == 1].sample(1000), dataset[dataset["class"] == -1].sample(1000)])
 dataset = shuffle(result)
+dataset = dataset.reset_index(drop = True)
+print(dataset.head())
 
-X = dataset.drop("class", axis=1)
+X = dataset.drop(["class", "altAllele", "refAllele", "chrom", "pos", "driverStat"], axis=1)
 y = dataset["class"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.20)
 
 # Set the parameters by cross-validation
 tuned_parameters = [
     {"kernel": ["rbf"], "gamma": [1e-3, 1e-4], "C": [1, 10, 100, 1000]},
-    {"kernel": ["linear"], "C": [1, 10, 100, 1000]},
+    {"kernel": ["linear"], "C": [0.001, 0.01, 0.1, 1,  10, 100, 1000, 10000, 100000]},
 ]
 
 scores = ["precision", "recall"]
