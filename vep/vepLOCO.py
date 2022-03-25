@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
@@ -14,23 +15,12 @@ from sklearn.model_selection import LeaveOneGroupOut
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
 
-# reading in the feature group in CSV format
-
-dataset = pd.read_csv("/user/home/uw20204/mrcieu_data/encode/public/TF+ChIP-seq/released/2021-10-21/data/training/coding/" +
-"CSV.txt", header=None)
-
-# reading in the corresponding variants to get genomic positions/ which chromosome the variants is on
-
-variants = pd.read_csv("/user/home/uw20204/mrcieu_data/encode/public/TF+ChIP-seq/released/2021-10-21/data/training/coding/" +
-"variants_incl.txt", names = ["chrom", "pos", "driverStat", "refAllele", "altAllele"], header=None, sep = "\t")
-
-variants = variants.iloc[range(0, len(dataset)), :]
-
-dataset_variants = pd.concat([variants, dataset], axis=1)
-rows_with_nan = [index for index, row in dataset_variants.iterrows() if row.isnull().any()]
-dataset_variants = dataset_variants.drop(labels=rows_with_nan, axis=0)
-
-dataset = dataset_variants.rename(columns={0: "class"})
+dataset = pd.read_csv("/user/home/uw20204/mrcieu_data/ensembl/public/vep/VEP_training_coding_csv.txt", sep = "\t", index_col = 0)
+print(dataset.head())
+rows_with_nan = [index for index, row in dataset.iterrows() if row.isnull().any()]
+dataset = dataset.drop(labels=rows_with_nan, axis=0)
+dataset = dataset.rename(columns={"driver_stat": "class"})
+print(dataset.head())
 
 dfWeightedAvPrec2 = []
 for i in range(1, 30):
@@ -44,7 +34,7 @@ for i in range(1, 30):
         # select stated chrom to hold out as the test set
         datasetTest = dataset[dataset["chrom"] == heldOutChrom]
 
-        X_test = datasetTest.drop(["class", "altAllele", "refAllele", "chrom", "pos", "driverStat"], axis=1) # test dataset X are the signal values ONLY
+        X_test = datasetTest.drop(["class", "chrom"], axis=1) # test dataset X are the signal values ONLY
         y_test = datasetTest["class"] # test dataset y, or labels, are the driver status ONLY
 
         # hold out stated chrom to generate training dataset
@@ -57,11 +47,11 @@ for i in range(1, 30):
         datasetTrain = shuffle(datasetTrain)
         datasetTrain = datasetTrain.reset_index(drop = True)
 
-        X_train = datasetTrain.drop(["class", "altAllele", "refAllele", "chrom", "pos", "driverStat"], axis=1) # train dataset X are the signal values ONLY
+        X_train = datasetTrain.drop(["class", "chrom"], axis=1) # train dataset X are the signal values ONLY
         y_train = datasetTrain["class"] # train dataset y, or labels, are the driver status ONLY
 
         # specify the model parameters for training, based on previous grid search
-        svclassifier = SVC(kernel='rbf', C = 10, gamma = 0.0001)
+        svclassifier = SVC(kernel='rbf', C = 1000, gamma = 0.001)
         svclassifier.fit(X_train, y_train) # fit the model
         y_pred = svclassifier.predict(X_test) # validate the model using all of the available data for the left out chromosome
         df = (classification_report(y_test, y_pred, output_dict=True)) # generate a classification report
