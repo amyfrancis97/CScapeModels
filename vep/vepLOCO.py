@@ -51,7 +51,7 @@ for i in range(1, 30):
         y_train = datasetTrain["class"] # train dataset y, or labels, are the driver status ONLY
 
         # specify the model parameters for training, based on previous grid search
-        svclassifier = SVC(kernel='rbf', C = 1000, gamma = 0.001)
+        svclassifier = SVC(kernel='linear', C = 100)
         svclassifier.fit(X_train, y_train) # fit the model
         y_pred = svclassifier.predict(X_test) # validate the model using all of the available data for the left out chromosome
         df = (classification_report(y_test, y_pred, output_dict=True)) # generate a classification report

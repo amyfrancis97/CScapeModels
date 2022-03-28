@@ -15,21 +15,22 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
 
 # reading in the feature group in CSV format
-dataset = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/hg38.phastCons30way/released/2021-10-27/" + "hg38.phastCons30way.testingVariantsCoding.CSV")
+dataset = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/hg38.phastCons30way/released/2021-10-27/" + "hg38.phastCons30way.trainingVariantsCoding.CSV")
 dataset = dataset.reset_index(drop = True)
 print(dataset.head())
 
 
-dataset2 = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/hg38.phyloP30way/released/2021-10-27/" + "hg38.phyloP30way.trainingVariantsCoding.CSV", index_col=0)
-dataset2 = dataset2.reset_index(drop = True)
+dataset2 = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/hg38.phyloP30way/released/2021-10-27/" + "hg38.phyloP30way.trainingVariantsCoding.CSV")
+print(dataset2.head())
 
-# adding score for phyloP into feature set
-dataset["score2"] = dataset2["score"]
-print(dataset.head())
+merged_data= dataset2.merge(dataset, on=["chrom","pos"])
+merged_data = merged_data.iloc[:, [0,1,2,11,6]]
+print(merged_data.head())
 
-dataset = dataset.rename(columns={"driver_status": "class"})
+dataset = merged_data
 rows_with_nan = [index for index, row in dataset.iterrows() if row.isnull().any()]
 dataset = dataset.drop(labels=rows_with_nan, axis=0)
+print(dataset.head())
 
 #cols= list(dataset.columns)
 #newList.remove("class")
@@ -46,8 +47,8 @@ for i in range(1, 30):
         # select stated chrom to hold out as the test set
         datasetTest = dataset[dataset["chrom"] == heldOutChrom]
         
-        X_test = datasetTest.drop(["class", "alternate_allele", "reference_allele", "chrom", "start", "pos"], axis=1) # test dataset X are the signal values ONLY
-        y_test = datasetTest["class"] # test dataset y, or labels, are the driver status ONLY
+        X_test = datasetTest.drop(["driver_status_x", "chrom", "pos"], axis=1) # test dataset X are the signal values ONLY
+        y_test = datasetTest["driver_status_x"] # test dataset y, or labels, are the driver status ONLY
 
         # hold out stated chrom to generate training dataset
         datasetTrain = dataset[dataset["chrom"] != heldOutChrom]
@@ -55,15 +56,15 @@ for i in range(1, 30):
         print("the number of samples in the training set are:" + str(len(datasetTrain)))
 
         # randomly sample 3000 +ive and 3000 -ive examples from the training dataset to carry forward
-        datasetTrain = pd.concat([datasetTrain[datasetTrain["class"] == 1].sample(1000), datasetTrain[datasetTrain["class"] == -1].sample(1000)])
+        datasetTrain = pd.concat([datasetTrain[datasetTrain["driver_status_x"] == 1].sample(1000), datasetTrain[datasetTrain["driver_status_x"] == -1].sample(1000)])
         datasetTrain = shuffle(datasetTrain)
         datasetTrain = datasetTrain.reset_index(drop = True)
 
-        X_train = datasetTrain.drop(["class", "alternate_allele", "reference_allele", "chrom", "start", "pos"], axis=1) # train dataset X are the signal values ONLY
-        y_train = datasetTrain["class"] # train dataset y, or labels, are the driver status ONLY
+        X_train = datasetTrain.drop(["driver_status_x", "chrom", "pos"], axis=1) # train dataset X are the signal values ONLY
+        y_train = datasetTrain["driver_status_x"] # train dataset y, or labels, are the driver status ONLY
 
         # specify the model parameters for training, based on previous grid search
-        svclassifier = SVC(kernel='rbf', C = 100, gamma = 0.001)
+        svclassifier = SVC(kernel='rbf', C = 1, gamma = 0.001)
         svclassifier.fit(X_train, y_train) # fit the model
         y_pred = svclassifier.predict(X_test) # validate the model using all of the available data for the left out chromosome
         df = (classification_report(y_test, y_pred, output_dict=True)) # generate a classification report

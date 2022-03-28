@@ -15,7 +15,7 @@ from sklearn.model_selection import LeaveOneGroupOut
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
 
-df = pd.read_csv("/user/home/uw20204/mrcieu_data/ensembl/public/vep/trainingVEP2.txt", sep = "\t")
+df = pd.read_csv("/user/home/uw20204/mrcieu_data/ensembl/public/vep/VEP_training_coding_csv_transcriptNoIncl.txt", sep = "\t")
 print(df.head())
 dataset = df.rename(columns={"driver_stat": "class"})
 result = pd.concat([dataset[dataset["class"] == 1].sample(1000), dataset[dataset["class"] == -1].sample(1000)])
@@ -23,9 +23,7 @@ dataset = shuffle(result)
 dataset = dataset.reset_index(drop = True)
 print(dataset.head())
 
-#X = dataset.drop(["class", "chrom"], axis=1)
-
-X = dataset.drop(["class"], axis=1)
+X = dataset.drop(["class", "chrom"], axis=1)
 y = dataset["class"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.20)
 

@@ -17,11 +17,12 @@ from sklearn.metrics import classification_report
 
 variants = pd.read_csv("/user/home/uw20204/mrcieu_data/ensembl/public/vep/ensembl-vep/variants_VEP.out", comment='#', on_bad_lines='skip', sep = "\t", header = None)
 variants = variants.dropna()
+print(variants.head())
 
 variantsOrig = pd.read_csv("/user/home/uw20204/CScapeVariants/trainingVariantsCoding.txt", comment='#', on_bad_lines='skip', sep = "\t")
 variantsOrig.pos = pd.to_numeric(variantsOrig.pos, downcast='integer')
 
-df = pd.DataFrame(columns=["chrom", "driver_stat", "splice_acceptor_variant","splice_donor_variant","stop_gained","frameshift_variant",
+df = pd.DataFrame(columns=["chrom", "driver_stat", "transcriptNum", "splice_acceptor_variant","splice_donor_variant","stop_gained","frameshift_variant",
 "stop_lost","start_lost","transcript_amplification","inframe_insertion","inframe_deletion","missense_variant",
 "protein_altering_variant","splice_region_variant","incomplete_terminal_codon_variant","start_retained_variant",
 "stop_retained_variant","synonymous_variant","coding_sequence_variant","mature_miRNA_variant","5_prime_UTR_variant",
@@ -36,17 +37,22 @@ for i in range(0, len(variants[1].unique())):
         for z in y:
             consReturned.append(z)
     consReturned = np.unique(consReturned)
-    consNotReturned = np.unique(df.columns[range(2, len(df.columns))].difference(consReturned))
+    consNotReturned = np.unique(df.columns[range(3, len(df.columns))].difference(consReturned))
     driver_stat = variantsOrig.loc[(variantsOrig.chrom == variants[variants[1] == variants[1].unique()[i]].reset_index(drop = True)[1][0].split(":")[0]) 
     & (variantsOrig.pos == int(variants[variants[1] == variants[1].unique()[i]].reset_index(drop = True)[1][0].split(":")[1]))].reset_index(drop = True).driver_status[0]
 
     chrom = variantsOrig.loc[(variantsOrig.chrom == variants[variants[1] == variants[1].unique()[i]].reset_index(drop = True)[1][0].split(":")[0]) 
     & (variantsOrig.pos == int(variants[variants[1] == variants[1].unique()[i]].reset_index(drop = True)[1][0].split(":")[1]))].reset_index(drop = True).chrom[0]
 
+    transcriptNum = len( variants[variants[1] == variants[1].unique()[i]][4].unique())
+    print(transcriptNum)
+
     df.loc[i, consReturned] = 1
     df.loc[i, "driver_stat"] = driver_stat
+    df.loc[i, "transcriptNum"] = transcriptNum
     df.loc[i, consNotReturned] = 0
     df.loc[i, "chrom"] = chrom.split(":")[0]
+
 
 #there were some mislabelled data in the training set
 df.loc[df.splice_donor_region_variant == 1, "splice_donor_variant"] = 1
@@ -54,5 +60,5 @@ df.loc[df.splice_polypyrimidine_tract_variant == 1, "splice_region_variant"] = 1
 df.loc[df.splice_donor_5th_base_variant == 1, "splice_donor_variant"] = 1
 df.drop(['splice_donor_region_variant', 'splice_polypyrimidine_tract_variant', 'splice_donor_5th_base_variant'], inplace=True, axis=1)
 
-df.to_csv("/user/home/uw20204/mrcieu_data/ensembl/public/vep/VEP_training_coding_csv.txt",  sep = "\t", index = None)
+df.to_csv("/user/home/uw20204/mrcieu_data/ensembl/public/vep/VEP_training_coding_csv_transcriptNoIncl.txt",  sep = "\t", index = None)
 
