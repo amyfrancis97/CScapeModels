@@ -15,8 +15,17 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
 
 # reading in the feature group in CSV format
-dataset = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/hg38.phastCons30way/released/2021-10-27/" + "hg38.phastCons30way.trainingVariantsCoding.CSV", index_col=0)
+dataset = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/hg38.phastCons30way/released/2021-10-27/" + "hg38.phastCons30way.testingVariantsCoding.CSV")
 dataset = dataset.reset_index(drop = True)
+print(dataset.head())
+
+
+dataset2 = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/hg38.phyloP30way/released/2021-10-27/" + "hg38.phyloP30way.trainingVariantsCoding.CSV", index_col=0)
+dataset2 = dataset2.reset_index(drop = True)
+
+# adding score for phyloP into feature set
+dataset["score2"] = dataset2["score"]
+print(dataset.head())
 
 dataset = dataset.rename(columns={"driver_status": "class"})
 rows_with_nan = [index for index, row in dataset.iterrows() if row.isnull().any()]
@@ -46,7 +55,7 @@ for i in range(1, 30):
         print("the number of samples in the training set are:" + str(len(datasetTrain)))
 
         # randomly sample 3000 +ive and 3000 -ive examples from the training dataset to carry forward
-        datasetTrain = pd.concat([datasetTrain[datasetTrain["class"] == 1].sample(7000), datasetTrain[datasetTrain["class"] == -1].sample(7000)])
+        datasetTrain = pd.concat([datasetTrain[datasetTrain["class"] == 1].sample(1000), datasetTrain[datasetTrain["class"] == -1].sample(1000)])
         datasetTrain = shuffle(datasetTrain)
         datasetTrain = datasetTrain.reset_index(drop = True)
 
@@ -54,7 +63,7 @@ for i in range(1, 30):
         y_train = datasetTrain["class"] # train dataset y, or labels, are the driver status ONLY
 
         # specify the model parameters for training, based on previous grid search
-        svclassifier = SVC(kernel='linear', C = 100000, gamma = 0.001)
+        svclassifier = SVC(kernel='rbf', C = 100, gamma = 0.001)
         svclassifier.fit(X_train, y_train) # fit the model
         y_pred = svclassifier.predict(X_test) # validate the model using all of the available data for the left out chromosome
         df = (classification_report(y_test, y_pred, output_dict=True)) # generate a classification report

@@ -15,21 +15,30 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
 
 # reading in the feature group in CSV format
-dataset = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/hg38.phastCons30way/released/2021-10-27/" + "hg38.phastCons30way.testingVariantsCoding.CSV")
+dataset = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/hg38.phastCons30way/released/2021-10-27/" + "hg38.phastCons30way.trainingVariantsCoding.CSV")
 dataset = dataset.reset_index(drop = True)
 print(dataset.head())
 
-dataset = dataset.rename(columns={"driver_status": "class"})
+
+dataset2 = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/hg38.phyloP30way/released/2021-10-27/" + "hg38.phyloP30way.trainingVariantsCoding.CSV")
+print(dataset2.head())
+
+merged_data= dataset2.merge(dataset, on=["chrom","pos"])
+merged_data = merged_data.iloc[:, [0,1,2,11,6]]
+print(merged_data.head())
+
+dataset = merged_data
 rows_with_nan = [index for index, row in dataset.iterrows() if row.isnull().any()]
 dataset = dataset.drop(labels=rows_with_nan, axis=0)
+print(dataset.head())
 
-result = pd.concat([dataset[dataset["class"] == 1].sample(1000), dataset[dataset["class"] == -1].sample(1000)])
+result = pd.concat([dataset[dataset["driver_status_x"] == 1].sample(1000), dataset[dataset["driver_status_x"] == -1].sample(1000)])
 dataset = shuffle(result)
 dataset = dataset.reset_index(drop = True)
 print(dataset.head())
 
-X = dataset.drop(["class", "alternate_allele", "reference_allele", "chrom", "start", "pos"], axis=1) 
-y = dataset["class"] 
+X = dataset.drop(["driver_status_x", "chrom", "pos"], axis=1) 
+y = dataset["driver_status_x"] 
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.20)
 
