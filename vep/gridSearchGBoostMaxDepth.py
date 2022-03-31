@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
@@ -14,6 +13,8 @@ import sys
 from sklearn.model_selection import LeaveOneGroupOut
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.ensemble import GradientBoostingClassifier
 
 df = pd.read_csv("/user/home/uw20204/mrcieu_data/ensembl/public/vep/VEP_training_coding_csv_transcriptNoIncl.txt", sep = "\t")
 print(df.head())
@@ -27,19 +28,13 @@ X = dataset.drop(["class", "chrom"], axis=1)
 y = dataset["class"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.20)
 
+
 # Set the parameters by cross-validation
-tuned_parameters = [
-    {"kernel": ["rbf"], "gamma": [1e-3, 1e-4], "C": [1, 10, 100, 1000]},
-    {"kernel": ["linear"], "C": [0.001, 0.01, 0.1, 1,  10, 100, 1000, 10000, 100000]},
-]
+p_test2 = {'max_depth':[2,3,4,5,6,7]}
 
 for i in range(1, 10):
-    print("# Tuning hyper-parameters for %s" % "balanced_accuracy")
-    print()
-
-    clf = GridSearchCV(SVC(), tuned_parameters, scoring="balanced_accuracy")
-    clf.fit(X_train, y_train)
-
-    print("Best parameters set found on development set:")
-    print()
-    print(clf.best_params_)
+    tuning = GridSearchCV(estimator =GradientBoostingClassifier(learning_rate=0.15,n_estimators=1250, min_samples_split=2, min_samples_leaf=1, subsample=1,max_features='sqrt', random_state=10), 
+            param_grid = p_test2, scoring='accuracy',n_jobs=4,iid=False, cv=5)
+    tuning.fit(X_train,y_train)
+    print("optimum maxdepth gboost")
+    print(tuning.cv_results_, tuning.best_params_, tuning.best_score_)
