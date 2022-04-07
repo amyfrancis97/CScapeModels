@@ -13,8 +13,8 @@ import sys
 from sklearn.model_selection import LeaveOneGroupOut
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
-import warnings
-warnings.filterwarnings('always') 
+from warnings import filterwarnings
+filterwarnings(action='ignore', category=DeprecationWarning, message='`np.bool` is a deprecated alias')
 
 # reading in the feature group in CSV format
 dataset = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/hg38.phastCons30way/released/2021-10-27/" + "hg38.phastCons30way.trainingVariantsCoding.CSV")
@@ -33,8 +33,10 @@ dataset = dataset.drop(labels=rows_with_nan, axis=0)
 #newList.remove("class")
 
 dfWeightedAvPrec2 = []
+dfBalancedAcc2 = []
 for i in range(1, 30):
     dfWeightedAvPrec1 = []
+    dfBalancedAcc1 = []
     for chrom in range(1, 22):
         
         heldOutChrom = "chr" + str(chrom)
@@ -65,7 +67,10 @@ for i in range(1, 30):
         df = (classification_report(y_test, y_pred, output_dict=True)) # generate a classification report
         df = df.get('weighted avg').get('precision') # get the weighted average from the classification report
         dfWeightedAvPrec1.append(df)
-
+    # get the average of the balanced acc, for each chromosome in LOCO-CV
+    def Average(lst):
+        return sum(lst) / len(lst)
+    dfBalancedAcc2.append(Average(dfBalancedAcc1))
     # get the average of the weighted averages, for each chromosome in LOCO-CV
     def Average(lst):
         return sum(lst) / len(lst)
@@ -77,6 +82,13 @@ def Average(lst):
 print("SVM")
 print(round(Average(dfWeightedAvPrec2), 3))
 weightedAvFinal = Average(dfWeightedAvPrec2)
+
+# get the average of the balanced acc, for each round of LOCO (30 rounds)
+def Average(lst):
+    return sum(lst) / len(lst)
+print("gradient boosting with 3000 -ive and 3000 +ive examples")
+print("balanced acc: " + str(round(Average(dfBalancedAcc2), 3)))
+balancedAccFinal = Average(dfBalancedAcc2)
 
 import numpy as np
 import pandas as pd
@@ -94,6 +106,8 @@ from sklearn.model_selection import LeaveOneGroupOut
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.ensemble import GradientBoostingClassifier
+from warnings import filterwarnings
+filterwarnings(action='ignore', category=DeprecationWarning, message='`np.bool` is a deprecated alias')
 
 # reading in the feature group in CSV format
 dataset = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/hg38.phastCons30way/released/2021-10-27/" + "hg38.phastCons30way.trainingVariantsCoding.CSV")
@@ -112,8 +126,10 @@ dataset = dataset.drop(labels=rows_with_nan, axis=0)
 #newList.remove("class")
 
 dfWeightedAvPrec2 = []
+dfBalancedAcc2 = []
 for i in range(1, 30):
     dfWeightedAvPrec1 = []
+    dfBalancedAcc1 = []
     for chrom in range(1, 22):
         
         heldOutChrom = "chr" + str(chrom)
@@ -144,13 +160,20 @@ for i in range(1, 30):
         y_pred = gb_clf.predict(X_test) # validate the model using all of the available data for the left out chromosome
         df = (classification_report(y_test, y_pred, output_dict=True)) # generate a classification report
         df = df.get('weighted avg').get('precision') # get the weighted average from the classification report
+        from sklearn.metrics import balanced_accuracy_score
+        bal_acc=balanced_accuracy_score(y_test,y_pred)
         dfWeightedAvPrec1.append(df)
-
+        dfBalancedAcc1.append(bal_acc) 
 
     # get the average of the weighted averages, for each chromosome in LOCO-CV
     def Average(lst):
         return sum(lst) / len(lst)
     dfWeightedAvPrec2.append(Average(dfWeightedAvPrec1))
+
+    # get the average of the balanced acc, for each chromosome in LOCO-CV
+    def Average(lst):
+        return sum(lst) / len(lst)
+    dfBalancedAcc2.append(Average(dfBalancedAcc1))
 
 # get the average of the weighted averages, for each round of LOCO (30 rounds)
 def Average(lst):
@@ -158,3 +181,10 @@ def Average(lst):
 print("gradient boosting with 3000 -ive and 3000 +ive examples")
 print(round(Average(dfWeightedAvPrec2), 3))
 weightedAvFinal = Average(dfWeightedAvPrec2)
+
+# get the average of the balanced acc, for each round of LOCO (30 rounds)
+def Average(lst):
+    return sum(lst) / len(lst)
+print("gradient boosting with 3000 -ive and 3000 +ive examples")
+print("balanced acc: " + str(round(Average(dfBalancedAcc2), 3)))
+balancedAccFinal = Average(dfBalancedAcc2)
