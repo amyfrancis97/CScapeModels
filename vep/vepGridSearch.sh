@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=LOCO_CV
+#SBATCH --job-name=gridSearch
 #SBATCH --partition=mrcieu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -9,4 +9,4 @@
 #SBATCH --mem=100G
 #SBATCH --chdir=/user/home/uw20204/scratch/CScapeModels/vep
 
-python gridSearchGBoostMaxDepth.py
+python gridSearchAll.py

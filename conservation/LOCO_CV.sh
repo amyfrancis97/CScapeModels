@@ -9,4 +9,4 @@
 #SBATCH --mem=100G
 #SBATCH --chdir=/user/home/uw20204/scratch/CScapeModels/conservation
 
-python LOCO_CV.py
+python LOCO_SVM.py
