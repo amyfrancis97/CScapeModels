@@ -122,50 +122,37 @@ def LOCO_GB(dataset, learning_rate, n_estimators, max_depth):
 # reading in best params file
 df = pd.read_csv("bestparamsnew.txt")
 
-consequences = consequences.rename(columns={"driver_stat": "class"})
-aminoAcids = aminoAcids.rename(columns={"driver_stat": "class"})
+# reading in the feature group in CSV format
+dataset = pd.read_csv(location + "Histone+ChIP-seq_csv.txt", header=None)
+
+# reading in the corresponding variants to get genomic positions/ which chromosome the variants is on
+variants = pd.read_csv(location + "Histone+ChIP-seq_variants.txt", names = ["chrom", "pos", "driverStat", "refAllele", "altAllele"], header=None, sep = "\t")
+
+
+# reformat to match criteria for grid search function
+variants = variants.iloc[range(0, len(dataset)), :]
+dataset_variants = pd.concat([variants, dataset], axis=1)
+dataset_variants = dataset_variants.drop(columns = ["pos", "refAllele", "altAllele", 0])
+dataset = dataset_variants.rename(columns={"driverStat": "class"})
 
 # carrying out function for LOCO-CV SVM and writing into parameter file.
 # pull out list of best params for each model
 
 # carry out SVM models
-myDict = ast.literal_eval(df.loc[(df["featureGroup"] == "consequences") & (df["model"] == "SVM"), "bestParams"].reset_index(drop = True)[0])
+myDict = ast.literal_eval(df.loc[(df["featureGroup"] == "histone_chip_seq") & (df["model"] == "SVM"), "bestParams"].reset_index(drop = True)[0])
+myDict = ast.literal_eval(df.loc[(df["featureGroup"] == "histone_chip_seq") & (df["model"] == "SVM"), "bestParams"].reset_index(drop = True)[0])
 if len(myDict.keys()) == 3:
-    consRes = LOCO_SVM(dataset = consequences, kernel = list(myDict.values())[2], C = list(myDict.values())[0], gamma = list(myDict.values())[1])
-    df.loc[(df["featureGroup"] == "consequences") & (df["model"] == "SVM"), "LOCO_weightedAv"] = consRes
+    consRes = LOCO_SVM(dataset = dataset, kernel = list(myDict.values())[2], C = list(myDict.values())[0], gamma = list(myDict.values())[1])
+    df.loc[(df["featureGroup"] == "histone_chip_seq") & (df["model"] == "SVM"), "LOCO_weightedAv"] = consRes
 else:
-    consRes = LOCO_SVM(dataset = consequences, kernel = list(myDict.values())[1], C = list(myDict.values())[0], gamma = "auto")
-    df.loc[(df["featureGroup"] == "encode") & (df["model"] == "SVM"), "LOCO_weightedAv"] = consRes
+    print(list(myDict.values())[0], list(myDict.values())[1])
+    consRes = LOCO_SVM(dataset = dataset, kernel = list(myDict.values())[1], C = list(myDict.values())[0], gamma = "auto")
+    df.loc[(df["featureGroup"] == "histone_chip_seq") & (df["model"] == "SVM"), "LOCO_weightedAv"] = consRes
 
-myDict = ast.literal_eval(df.loc[(df["featureGroup"] == "aminoAcids") & (df["model"] == "SVM"), "bestParams"].reset_index(drop = True)[0])
-if len(myDict.keys()) == 3:
-    AARes = LOCO_SVM(aminoAcids, list(myDict.values())[2], list(myDict.values())[0], list(myDict.values())[1])
-    df.loc[(df["featureGroup"] == "aminoAcids") & (df["model"] == "SVM"), "LOCO_weightedAv"] = AARes
-else:
-    consRes = LOCO_SVM(dataset = aminoAcids, kernel = list(myDict.values())[1], C = list(myDict.values())[0], gamma = "auto")
-    df.loc[(df["featureGroup"] == "encode") & (df["model"] == "SVM"), "LOCO_weightedAv"] = consRes
-
-aminoAcids2 = aminoAcids.iloc[:, 3:]
-aminoAcidsConsMerged = pd.concat([consequences, aminoAcids2], axis=1)
-myDict = ast.literal_eval(df.loc[(df["featureGroup"] == "aminoAcidsConsMerged") & (df["model"] == "SVM"), "bestParams"].reset_index(drop = True)[0])
-if len(myDict.keys()) == 3:
-    mergedRes = LOCO_SVM(aminoAcidsConsMerged, list(myDict.values())[1], list(myDict.values())[0], 'auto')
-    df.loc[(df["featureGroup"] == "aminoAcidsConsMerged") & (df["model"] == "SVM"), "LOCO_weightedAv"] = AARes
-else:
-    consRes = LOCO_SVM(dataset = aminoAcidsConsMerged, kernel = list(myDict.values())[1], C = list(myDict.values())[0], gamma = "auto")
-    df.loc[(df["featureGroup"] == "encode") & (df["model"] == "SVM"), "LOCO_weightedAv"] = consRes
 # carry out GB models
-myDict = ast.literal_eval(df.loc[(df["featureGroup"] == "consequences") & (df["model"] == "GB"), "bestParams"].reset_index(drop = True)[0])
-consRes = LOCO_GB(consequences, list(myDict.values())[1], list(myDict.values())[2], list(myDict.values())[0])
-df.loc[(df["featureGroup"] == "consequences") & (df["model"] == "GB"), "LOCO_weightedAv"] = consRes
-
-myDict = ast.literal_eval(df.loc[(df["featureGroup"] == "aminoAcids") & (df["model"] == "GB"), "bestParams"].reset_index(drop = True)[0])
-AARes = LOCO_GB(aminoAcids, list(myDict.values())[1], list(myDict.values())[2], list(myDict.values())[0])
-df.loc[(df["featureGroup"] == "aminoAcids") & (df["model"] == "GB"), "LOCO_weightedAv"] = AARes
-
-myDict = ast.literal_eval(df.loc[(df["featureGroup"] == "aminoAcidsConsMerged") & (df["model"] == "GB"), "bestParams"].reset_index(drop = True)[0])
-mergedRes = LOCO_GB(aminoAcidsConsMerged, list(myDict.values())[1], list(myDict.values())[2], list(myDict.values())[0])
-df.loc[(df["featureGroup"] == "aminoAcidsConsMerged") & (df["model"] == "GB"), "LOCO_weightedAv"] = AARes
+myDict = ast.literal_eval(df.loc[(df["featureGroup"] == "histone_chip_seq") & (df["model"] == "GB"), "bestParams"].reset_index(drop = True)[0])
+consRes = LOCO_GB(dataset, list(myDict.values())[1], list(myDict.values())[2], list(myDict.values())[0])
+df.loc[(df["featureGroup"] == "histone_chip_seq") & (df["model"] == "GB"), "LOCO_weightedAv"] = consRes
 
 # write back to the CSV
-df.to_csv("/user/home/uw20204/scratch/CScapeModels/vep/bestparamsnewv3.txt", index = False)
+df.to_csv("/user/home/uw20204/scratch/CScapeModels/encode/bestparamsnewv3.txt", index = False)

@@ -19,7 +19,7 @@ def gridSearchSVM(dataset):
     rows_with_nan = [index for index, row in dataset.iterrows() if row.isnull().any()]
     dataset = dataset.drop(labels=rows_with_nan, axis=0)
 
-    result = pd.concat([dataset[dataset["class"] == 1].sample(50), dataset[dataset["class"] == -1].sample(50)])
+    result = pd.concat([dataset[dataset["class"] == 1].sample(1000), dataset[dataset["class"] == -1].sample(1000)])
     dataset = shuffle(result)
     dataset = dataset.reset_index(drop = True)
 
@@ -42,7 +42,7 @@ def gridSearchGB(dataset):
     rows_with_nan = [index for index, row in dataset.iterrows() if row.isnull().any()]
     dataset = dataset.drop(labels=rows_with_nan, axis=0)
 
-    result = pd.concat([dataset[dataset["class"] == 1].sample(50), dataset[dataset["class"] == -1].sample(50)])
+    result = pd.concat([dataset[dataset["class"] == 1].sample(1000), dataset[dataset["class"] == -1].sample(1000)])
     dataset = shuffle(result)
     dataset = dataset.reset_index(drop = True)
 
@@ -71,33 +71,34 @@ def gridSearchGB(dataset):
     bestParams.update(best_params_learning_est)
     return bestParams, tuning.best_score_
 
-def getOptimalParams(csv, variant_anno):
-    # reading in the feature group in CSV format
-    dataset = pd.read_csv(location + csv, header=None)
 
-    # reading in the corresponding variants to get genomic positions/ which chromosome the variants is on
-    variants = pd.read_csv(location + variant_anno, names = ["chrom", "pos", "driverStat", "refAllele", "altAllele"], header=None, sep = "\t")
+# SVM grid search
+dfFin = pd.DataFrame(columns = ["overallFeatureCat", "featureGroup", "model", "bestParams", "PA_bestScore","LOCO_weightedAv"])
+consequences = consequences.rename(columns={"driver_stat": "class"})
+aminoAcids = aminoAcids.rename(columns={"driver_stat": "class"})
+VEPConsqRes = gridSearchSVM(consequences)
+df = pd.DataFrame({"overallFeatureCat": "vep", "featureGroup": ["consequences"], "model": ["SVM"], "bestParams":[VEPConsqRes[0]], "PA_bestScore": [round(VEPConsqRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
+dfFin = dfFin.append(df)
+VEPaaRes = gridSearchSVM(aminoAcids)
+df = pd.DataFrame({"overallFeatureCat": "vep", "featureGroup": ["aminoAcids"], "model": ["SVM"], "bestParams":[VEPaaRes[0]], "PA_bestScore": [round(VEPaaRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
+dfFin = dfFin.append(df)
+aminoAcids2 = aminoAcids.iloc[:, 3:]
+merged = pd.concat([consequences, aminoAcids2], axis=1)
+VEPaaConsqRes = gridSearchSVM(merged)
+df = pd.DataFrame({"overallFeatureCat": "vep", "featureGroup": ["aminoAcidsConsMerged"], "model": ["SVM"], "bestParams":[VEPaaConsqRes[0]], "PA_bestScore": [round(VEPaaConsqRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
+dfFin = dfFin.append(df)
 
+# gradient boosting grid search
+dfFin = dfFin
+VEPConsqRes = gridSearchGB(consequences)
+df = pd.DataFrame({"overallFeatureCat": "vep", "featureGroup": ["consequences"], "model": ["GB"], "bestParams":[VEPConsqRes[0]], "PA_bestScore": [round(VEPConsqRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
+dfFin = dfFin.append(df)
+VEPaaRes = gridSearchGB(aminoAcids)
+df = pd.DataFrame({"overallFeatureCat": "vep", "featureGroup": ["aminoAcids"], "model": ["GB"], "bestParams":[VEPaaRes[0]], "PA_bestScore": [round(VEPaaRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
+dfFin = dfFin.append(df)
+merged = pd.concat([consequences, aminoAcids2], axis=1)
+VEPaaConsqRes = gridSearchGB(merged)
+df = pd.DataFrame({"overallFeatureCat": "vep", "featureGroup": ["aminoAcidsConsMerged"], "model": ["GB"], "bestParams":[VEPaaConsqRes[0]], "PA_bestScore": [round(VEPaaConsqRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
+dfFin = dfFin.append(df)
 
-    # reformat to match criteria for grid search function
-    variants = variants.iloc[range(0, len(dataset)), :]
-    dataset_variants = pd.concat([variants, dataset], axis=1)
-    dataset_variants = dataset_variants.drop(columns = ["pos", "refAllele", "altAllele", 0])
-    dataset = dataset_variants.rename(columns={"driverStat": "class"})
-
-    # SVM grid search
-    dfFin = pd.DataFrame(columns = ["overallFeatureCat", "featureGroup", "model", "bestParams", "PA_bestScore","LOCO_weightedAv"])
-    gridSearchRes = gridSearchSVM(dataset)
-    df = pd.DataFrame({"overallFeatureCat": "encode", "featureGroup": ["histone_chip_seq"], "model": ["SVM"], "bestParams":[gridSearchRes[0]], "PA_bestScore": [round(gridSearchRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
-    dfFin = dfFin.append(df)
-
-    # gradient boosting grid search
-    dfFin = dfFin
-    gridSearchRes = gridSearchGB(dataset)
-    df = pd.DataFrame({"overallFeatureCat": "encode", "featureGroup": ["histone_chip_seq"], "model": ["GB"], "bestParams":[gridSearchRes[0]], "PA_bestScore": [round(gridSearchRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
-    dfFin = dfFin.append(df)
-    return dfFin
-
-res = getOptimalParams("Histone+ChIP-seq_csv.txt", "Histone+ChIP-seq_variants.txt")
-
-res.to_csv("/user/home/uw20204/scratch/CScapeModels/encode/bestparamsnew.txt", index = False)
+dfFin.to_csv("/user/home/uw20204/scratch/CScapeModels/vep/bestparamsnew.txt", index = False)
