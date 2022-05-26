@@ -9,4 +9,4 @@
 #SBATCH --mem=100G
 #SBATCH --chdir=/user/home/uw20204/scratch/CScapeModels/encode
 
-python gridSearchAll.py
+python gridSearchFinal.py

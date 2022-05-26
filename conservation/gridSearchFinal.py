@@ -19,7 +19,7 @@ def gridSearchSVM(dataset):
     rows_with_nan = [index for index, row in dataset.iterrows() if row.isnull().any()]
     dataset = dataset.drop(labels=rows_with_nan, axis=0)
 
-    result = pd.concat([dataset[dataset["class"] == 1].sample(50), dataset[dataset["class"] == -1].sample(50)])
+    result = pd.concat([dataset[dataset["class"] == 1].sample(1000), dataset[dataset["class"] == -1].sample(1000)])
     dataset = shuffle(result)
     dataset = dataset.reset_index(drop = True)
 
@@ -42,7 +42,7 @@ def gridSearchGB(dataset):
     rows_with_nan = [index for index, row in dataset.iterrows() if row.isnull().any()]
     dataset = dataset.drop(labels=rows_with_nan, axis=0)
 
-    result = pd.concat([dataset[dataset["class"] == 1].sample(50), dataset[dataset["class"] == -1].sample(50)])
+    result = pd.concat([dataset[dataset["class"] == 1].sample(1000), dataset[dataset["class"] == -1].sample(1000)])
     dataset = shuffle(result)
     dataset = dataset.reset_index(drop = True)
 
@@ -71,36 +71,23 @@ def gridSearchGB(dataset):
     bestParams.update(best_params_learning_est)
     return bestParams, tuning.best_score_
 
-def getOptimalParams(csv, variant_anno):
-    # reading in the feature group in CSV format
-    dataset = pd.read_csv(location + csv, header=None)
+# reading in the feature group in CSV format
+dataset = dataset.reset_index(drop = True)
+merged_data= dataset2.merge(dataset, on=["chrom","pos"])
+merged_data = merged_data.iloc[:, [0,1,2,11,6]]
+dataset = merged_data
 
-    # reading in the corresponding variants to get genomic positions/ which chromosome the variants is on
-    variants = pd.read_csv(location + variant_anno, names = ["chrom", "pos", "driverStat", "refAllele", "altAllele"], header=None, sep = "\t")
+# reformat to match criteria for grid search function
+dfFin = pd.DataFrame(columns = ["overallFeatureCat", "featureGroup", "model", "bestParams", "PA_bestScore","LOCO_weightedAv"])
+dataset = dataset.drop(columns = "pos")
+dataset = dataset.rename(columns={"driver_status_x": "class"})
+VEPConsqRes = gridSearchSVM(dataset)
+df = pd.DataFrame({"overallFeatureCat": "conservation", "featureGroup": ["30WayCons"], "model": ["SVM"], "bestParams":[VEPConsqRes[0]], "PA_bestScore": [round(VEPConsqRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
+dfFin = dfFin.append(df)
 
-
-    # reformat to match criteria for grid search function
-    variants = variants.iloc[range(0, len(dataset)), :]
-    dataset_variants = pd.concat([variants, dataset], axis=1)
-    dataset_variants = dataset_variants.drop(columns = ["pos", "refAllele", "altAllele", 0])
-    dataset = dataset_variants.rename(columns={"driverStat": "class"})
-
-    # SVM grid search
-    dfFin = pd.DataFrame(columns = ["overallFeatureCat", "featureGroup", "model", "bestParams", "PA_bestScore","LOCO_weightedAv"])
-    gridSearchRes = gridSearchSVM(dataset)
-    df = pd.DataFrame({"overallFeatureCat": "encode", "featureGroup": [csv[:len(csv)-8]], "model": ["SVM"], "bestParams":[gridSearchRes[0]], "PA_bestScore": [round(gridSearchRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
-    dfFin = dfFin.append(df)
-
-    # gradient boosting grid search
-    dfFin = dfFin
-    gridSearchRes = gridSearchGB(dataset)
-    df = pd.DataFrame({"overallFeatureCat": "encode", "featureGroup": [csv[:len(csv)-8]], "model": ["GB"], "bestParams":[gridSearchRes[0]], "PA_bestScore": [round(gridSearchRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
-    dfFin = dfFin.append(df)
-    return dfFin
-
-res1 = getOptimalParams("Histone+ChIP-seq_csv.txt", "Histone+ChIP-seq_variants.txt")
-res2 = getOptimalParams("TF+ChIP-seq_csv.txt", "TF+ChIP-seq_variants.txt")
-res3 = getOptimalParams("eCLIP_csv.txt", "eCLIP_variants.txt")
-res4 = getOptimalParams("ATAC-seq_csv.txt", "ATAC-seq_variants.txt")
-result = pd.concat([res1, res2, res3, res4])
-result.to_csv("/user/home/uw20204/scratch/CScapeModels/encode/bestparamsnew3.txt", index = False)
+#
+dfFin = dfFin
+VEPConsqRes = gridSearchGB(dataset)
+df = pd.DataFrame({"overallFeatureCat": "conservation", "featureGroup": ["30WayCons"], "model": ["GB"], "bestParams":[VEPConsqRes[0]], "PA_bestScore": [round(VEPConsqRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
+dfFin = dfFin.append(df)
+dfFin.to_csv("/user/home/uw20204/scratch/CScapeModels/conservation/bestparamsnew.txt", index = False)
