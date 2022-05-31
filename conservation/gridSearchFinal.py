@@ -9,11 +9,11 @@ import numpy as np
 from sklearn import svm
 from sklearn.utils import shuffle
 import sys
+import os
 from sklearn.model_selection import LeaveOneGroupOut
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.ensemble import GradientBoostingClassifier
-from config import *
 
 def gridSearchSVM(dataset):
     rows_with_nan = [index for index, row in dataset.iterrows() if row.isnull().any()]
@@ -71,23 +71,37 @@ def gridSearchGB(dataset):
     bestParams.update(best_params_learning_est)
     return bestParams, tuning.best_score_
 
-# reading in the feature group in CSV format
-dataset = dataset.reset_index(drop = True)
-merged_data= dataset2.merge(dataset, on=["chrom","pos"])
-merged_data = merged_data.iloc[:, [0,1,2,11,6]]
-dataset = merged_data
+def getOptimalParams(dataset1, dataset2, featureGroup):
+    # reading in the feature group in CSV format
+    dataset1 = dataset1.reset_index(drop = True)
+    merged_data= dataset2.merge(dataset1, on=["chrom","pos"])
+    merged_data = merged_data.iloc[:, [0,1,2,11,6]]
+    dataset = merged_data
+    print(dataset.head)
 
-# reformat to match criteria for grid search function
-dfFin = pd.DataFrame(columns = ["overallFeatureCat", "featureGroup", "model", "bestParams", "PA_bestScore","LOCO_weightedAv"])
-dataset = dataset.drop(columns = "pos")
-dataset = dataset.rename(columns={"driver_status_x": "class"})
-VEPConsqRes = gridSearchSVM(dataset)
-df = pd.DataFrame({"overallFeatureCat": "conservation", "featureGroup": ["30WayCons"], "model": ["SVM"], "bestParams":[VEPConsqRes[0]], "PA_bestScore": [round(VEPConsqRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
-dfFin = dfFin.append(df)
+    # reformat to match criteria for grid search function
+    dfFin = pd.DataFrame(columns = ["overallFeatureCat", "featureGroup", "model", "bestParams", "PA_bestScore","LOCO_weightedAv"])
+    dataset = dataset.drop(columns = "pos")
+    dataset = dataset.rename(columns={"driver_status_x": "class"})
+    VEPConsqRes = gridSearchSVM(dataset)
+    df = pd.DataFrame({"overallFeatureCat": "conservation", "featureGroup": [featureGroup], "model": ["SVM"], "bestParams":[VEPConsqRes[0]], "PA_bestScore": [round(VEPConsqRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
+    dfFin = dfFin.append(df)
 
-#
-dfFin = dfFin
-VEPConsqRes = gridSearchGB(dataset)
-df = pd.DataFrame({"overallFeatureCat": "conservation", "featureGroup": ["30WayCons"], "model": ["GB"], "bestParams":[VEPConsqRes[0]], "PA_bestScore": [round(VEPConsqRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
-dfFin = dfFin.append(df)
-dfFin.to_csv("/user/home/uw20204/scratch/CScapeModels/conservation/bestparamsnew.txt", index = False)
+    #
+    dfFin = dfFin
+    VEPConsqRes = gridSearchGB(dataset)
+    df = pd.DataFrame({"overallFeatureCat": "conservation", "featureGroup": [featureGroup], "model": ["GB"], "bestParams":[VEPConsqRes[0]], "PA_bestScore": [round(VEPConsqRes[1], 4)],"LOCO_weightedAv": ["N/A"]})
+    dfFin = dfFin.append(df)
+    return dfFin
+
+if __name__ == "__main__":
+    os.chdir("/user/home/uw20204/mrcieu_data/ucsc/public/all_features_csv/coding/train")
+    # reading in the feature group in CSV format
+    print(sys.argv[1])
+    print(sys.argv[2])
+    print(sys.argv[3])
+    dataset1 = pd.read_csv(sys.argv[1])
+    dataset2 = pd.read_csv(sys.argv[2])
+    featureGroup = sys.argv[3]
+    res = getOptimalParams(dataset1, dataset2, featureGroup)
+    res.to_csv("/user/home/uw20204/scratch/CScapeModels/conservation/" + featureGroup + "bestparams.txt", index = False)

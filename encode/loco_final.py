@@ -120,10 +120,13 @@ def LOCO_GB(dataset, learning_rate, n_estimators, max_depth):
     return weightedAvFinal
 
 # reading in best params file
-df = pd.read_csv("bestparamsnew2.txt")
+df = pd.read_csv("encodeBestParams.txt", header=None, names=["overallFeatureCat","featureGroup","model","bestParams","PA_bestScore","LOCO_weightedAv"])
 
 # carry out SVM models
 for featureGroup in df["featureGroup"].unique():
+    # reading in best params file
+    df = pd.read_csv("encodeBestParams.txt", header=None, names=["overallFeatureCat","featureGroup","model","bestParams","PA_bestScore","LOCO_weightedAv"])
+    print(featureGroup)    
     # reading in the feature group in CSV format
     dataset = pd.read_csv(location + featureGroup + "_csv.txt", header=None)
 
@@ -154,4 +157,4 @@ for featureGroup in df["featureGroup"].unique():
     df.loc[(df["featureGroup"] == featureGroup) & (df["model"] == "GB"), "LOCO_weightedAv"] = consRes
 
     # write back to the CSV
-    df.to_csv("/user/home/uw20204/scratch/CScapeModels/encode/bestparamsnew2.txt", index = False)
+    df.to_csv("/user/home/uw20204/scratch/CScapeModels/encode/encodeBestParams.txt", index = False)

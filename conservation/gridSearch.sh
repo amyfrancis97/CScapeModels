@@ -9,4 +9,8 @@
 #SBATCH --mem=100G
 #SBATCH --chdir=/user/home/uw20204/scratch/CScapeModels/conservation
 
-python gridSearchGBoost.py
+dataset1=("$1")
+dataset2=("$2")
+featureGroup=("$3")
+
+python gridSearchFinal.py ${dataset1} ${dataset2} ${featureGroup}

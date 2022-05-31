@@ -16,10 +16,12 @@ from sklearn.ensemble import GradientBoostingClassifier
 from config import *
 
 def gridSearchSVM(dataset):
+    print(dataset.head())
     rows_with_nan = [index for index, row in dataset.iterrows() if row.isnull().any()]
     dataset = dataset.drop(labels=rows_with_nan, axis=0)
 
-    result = pd.concat([dataset[dataset["class"] == 1].sample(50), dataset[dataset["class"] == -1].sample(50)])
+    print(dataset.head())
+    result = pd.concat([dataset[dataset["class"] == 1].sample(1000), dataset[dataset["class"] == -1].sample(1000)])
     dataset = shuffle(result)
     dataset = dataset.reset_index(drop = True)
 
@@ -42,7 +44,7 @@ def gridSearchGB(dataset):
     rows_with_nan = [index for index, row in dataset.iterrows() if row.isnull().any()]
     dataset = dataset.drop(labels=rows_with_nan, axis=0)
 
-    result = pd.concat([dataset[dataset["class"] == 1].sample(50), dataset[dataset["class"] == -1].sample(50)])
+    result = pd.concat([dataset[dataset["class"] == 1].sample(1000), dataset[dataset["class"] == -1].sample(1000)])
     dataset = shuffle(result)
     dataset = dataset.reset_index(drop = True)
 
@@ -98,9 +100,7 @@ def getOptimalParams(csv, variant_anno):
     dfFin = dfFin.append(df)
     return dfFin
 
-res1 = getOptimalParams("Histone+ChIP-seq_csv.txt", "Histone+ChIP-seq_variants.txt")
-res2 = getOptimalParams("TF+ChIP-seq_csv.txt", "TF+ChIP-seq_variants.txt")
-res3 = getOptimalParams("eCLIP_csv.txt", "eCLIP_variants.txt")
-res4 = getOptimalParams("ATAC-seq_csv.txt", "ATAC-seq_variants.txt")
-result = pd.concat([res1, res2, res3, res4])
-result.to_csv("/user/home/uw20204/scratch/CScapeModels/encode/bestparamsnew3.txt", index = False)
+if __name__ == "__main__":
+    feature=sys.argv[1]
+    res = getOptimalParams(feature + "_csv.txt", feature + "_variants.txt")
+    res.to_csv("/user/home/uw20204/scratch/CScapeModels/encode/" + feature + "bestparamsnew.txt", index = False, header = None)
