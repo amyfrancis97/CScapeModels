@@ -4,8 +4,10 @@ import sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn import svm
 from sklearn.utils import shuffle
 import sys
@@ -14,7 +16,6 @@ from sklearn.model_selection import GridSearchCV
 import ast
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.ensemble import GradientBoostingClassifier
-from config import *
 
 # SVM classifier
 def LOCO_SVM(dataset, kernel, C, gamma):
@@ -117,26 +118,45 @@ def LOCO_GB(dataset, learning_rate, n_estimators, max_depth):
     weightedAvFinal = round(Average(dfWeightedAvPrec2), 4)
     return weightedAvFinal
 
-if __name__ == "__main__":
-    featureGroup=sys.argv[1]
-
+# reading in best params file
+df = pd.read_csv("conservationBestParams.txt")
+print(df.head())
+# carry out SVM models
+for featureGroup in df["featureGroup"].unique():
     # reading in best params file
-    df = pd.read_csv(featureGroup + "bestparamsnew.txt", header=None, names=["overallFeatureCat","featureGroup","model","bestParams","PA_bestScore","LOCO_weightedAv"])
+    df = pd.read_csv("conservationBestParams.txt", header=None, names=["overallFeatureCat","featureGroup","model","bestParams","PA_bestScore","LOCO_weightedAv"])
     print(featureGroup)    
+
+    # read in the correct datasets given the feature group
+    if "Mappability" in featureGroup:
+        num = ""
+        for c in featureGroup:
+            if c.isdigit():
+                num = num + c
+        dataset1 = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/all_features_csv/coding/train/" + "k" + num + ".Umap.MultiTrackMappabilitytrainingVariantsCoding_web.CSV")
+        dataset2 = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/all_features_csv/coding/train/" + "k" + num + ".Bismap.MultiTrackMappabilitytrainingVariantsCoding_web.CSV")
+    else:
+        print(featureGroup)
+        num = ""
+        for c in featureGroup:
+            if c.isdigit():
+                num = num + c
+        dataset1 = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/all_features_csv/coding/train/" + "hg38.phastCons" + num + "waytrainingVariantsCoding_web.CSV")
+        dataset2 = pd.read_csv("/user/home/uw20204/mrcieu_data/ucsc/public/all_features_csv/coding/train/" + "hg38.phyloP" + num + "waytrainingVariantsCoding_web.CSV")
+
     # reading in the feature group in CSV format
-    dataset = pd.read_csv(location + featureGroup + "_csv.txt", header=None)
-
-    # reading in the corresponding variants to get genomic positions/ which chromosome the variants is on
-    variants = pd.read_csv(location + featureGroup + "_variants.txt", names = ["chrom", "pos", "driverStat", "refAllele", "altAllele"], header=None, sep = "\t")
-
-    # reformat to match criteria for grid search function
-    variants = variants.iloc[range(0, len(dataset)), :]
-    dataset_variants = pd.concat([variants, dataset], axis=1)
-    dataset_variants = dataset_variants.drop(columns = ["pos", "refAllele", "altAllele", 0])
-    dataset = dataset_variants.rename(columns={"driverStat": "class"})
+    dataset1 = dataset1.reset_index(drop = True)
+    merged_data= dataset2.merge(dataset1, on=["chrom","pos"])
+    merged_data = merged_data.iloc[:, [0,1,2,11,6]]
+    dataset = merged_data
+    
+    dataset = dataset.drop(columns = "pos")
+    dataset = dataset.rename(columns={"driver_status_x": "class"})
+    print(dataset.head)
 
     # carrying out function for LOCO-CV SVM and writing into parameter file.
     # pull out list of best params for each model
+    myDict = ast.literal_eval(df.loc[(df["featureGroup"] == featureGroup) & (df["model"] == "SVM"), "bestParams"].reset_index(drop = True)[0])
     myDict = ast.literal_eval(df.loc[(df["featureGroup"] == featureGroup) & (df["model"] == "SVM"), "bestParams"].reset_index(drop = True)[0])
     if len(myDict.keys()) == 3:
         consRes = LOCO_SVM(dataset = dataset, kernel = list(myDict.values())[2], C = list(myDict.values())[0], gamma = list(myDict.values())[1])
@@ -152,4 +172,4 @@ if __name__ == "__main__":
     df.loc[(df["featureGroup"] == featureGroup) & (df["model"] == "GB"), "LOCO_weightedAv"] = consRes
 
     # write back to the CSV
-    df.to_csv("/user/home/uw20204/scratch/CScapeModels/encode/" + featureGroup + "bestparams.txt", index = False)
+    df.to_csv("/user/home/uw20204/scratch/CScapeModels/conservation/conservationBestParams.txt", index = False)
