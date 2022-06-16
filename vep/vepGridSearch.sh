@@ -10,3 +10,5 @@
 #SBATCH --chdir=/user/home/uw20204/scratch/CScapeModels/vep
 
 python gridSearchSVM.py
+
+##test
